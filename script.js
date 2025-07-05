@@ -2,7 +2,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   let remedyData = [];
   let selectedRemedyIndex = null;
-  let modalInstance = null;
 
   fetch('remedies.json')
     .then(response => response.json())
@@ -15,6 +14,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const query = searchInput.value.toLowerCase();
         const filtered = remedyData.filter(item => item.Name.toLowerCase().includes(query));
         renderTable(filtered);
+      });
+
+      document.getElementById('buyListBtn').addEventListener('click', () => {
+        const list = remedyData.filter(item => {
+          const qty30 = parseInt(item["Quantitiy - 30 ml"]) || 0;
+          const qty100 = parseInt(item["Quantitiy -  100ml"]) || 0;
+          const total = qty30 + qty100;
+          return total <= 1;
+        }).map(item => item.Name);
+
+        if (list.length === 0) {
+          alert('No remedies found with total quantity less than or equal to 2.');
+        } else {
+          alert('Buy List:\n' + list.join('\n'));
+        }
       });
     });
 
@@ -33,22 +47,23 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${qty30}</td>
         <td>${qty100}</td>
         <td>${total}</td>
-        <td><button class="btn btn-outline-primary btn-sm" data-index="${index}" data-bs-toggle="modal" data-bs-target="#updateModal">Update</button></td>
+        <td><button class="btn btn-outline-primary btn-sm" onclick="openUpdateForm(${index})">Update</button></td>
       `;
       tableBody.appendChild(row);
     });
-
-    document.querySelectorAll('[data-bs-toggle="modal"]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        selectedRemedyIndex = parseInt(e.target.getAttribute('data-index'));
-        const item = remedyData[selectedRemedyIndex];
-
-        document.getElementById('remedyName').value = item.Name;
-        document.getElementById('qty30ml').value = item["Quantitiy - 30 ml"];
-        document.getElementById('qty100ml').value = item["Quantitiy -  100ml"];
-      });
-    });
   }
+
+  window.openUpdateForm = function(index) {
+    selectedRemedyIndex = index;
+    const item = remedyData[index];
+
+    document.getElementById('remedyName').value = item.Name;
+    document.getElementById('qty30ml').value = item["Quantitiy - 30 ml"];
+    document.getElementById('qty100ml').value = item["Quantitiy -  100ml"];
+
+    const modal = new bootstrap.Modal(document.getElementById('updateModal'));
+    modal.show();
+  };
 
   document.getElementById('updateForm').addEventListener('submit', function (event) {
     event.preventDefault();
@@ -60,7 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
     remedyData[selectedRemedyIndex]["Quantitiy -  100ml"] = qty100;
 
     renderTable(remedyData);
-    const modal = bootstrap.Modal.getInstance(document.getElementById('updateModal'));
-    modal.hide();
+    bootstrap.Modal.getInstance(document.getElementById('updateModal')).hide();
   });
 });
