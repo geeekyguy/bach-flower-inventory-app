@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', () => {
   let remedyData = remediesData;
   let selectedRemedyIndex = null;
@@ -17,13 +16,30 @@ document.addEventListener('DOMContentLoaded', () => {
       const qty30 = parseInt(item["Quantitiy - 30 ml"]) || 0;
       const qty100 = parseInt(item["Quantitiy -  100ml"]) || 0;
       const total = qty30 + qty100;
-      return total <= 2;
+      return total <= 1;
     }).map(item => item.Name);
 
     if (list.length === 0) {
       alert('No remedies found with total quantity less than or equal to 2.');
     } else {
       alert('Buy List:\n' + list.join('\n'));
+
+      // Send to Google Apps Script Web App
+      fetch("https://script.google.com/macros/s/AKfycbwKYt5uhGhp6dQx1YmbqKACPlgDNUNCZXgqYvwUYpQ4AVw4xzeeyR7MKbmrsz6p34BG4Q/exec", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ list: list })
+      })
+      .then(response => {
+        if (response.ok) {
+          console.log("Buy list sent to email via Apps Script.");
+        } else {
+          console.error("Failed to send to email.");
+        }
+      })
+      .catch(error => {
+        console.error("Error:", error);
+      });
     }
   });
 
