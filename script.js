@@ -79,8 +79,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('updateForm').addEventListener('submit', function (event) {
     event.preventDefault();
 
-    const qty30 = parseInt(document.getElementById('qty30ml').value) || 0;
-    const qty100 = parseInt(document.getElementById('qty100ml').value) || 0;
+    const qty30 = parseInt(document.getElementById('qty30ml').value.trim()) || 0;
+    const qty100 = parseInt(document.getElementById('qty100ml').value.trim()) || 0;
+
+    document.getElementById('qty30ml').value = qty30;
+    document.getElementById('qty100ml').value = qty100;
 
     remedyData[selectedRemedyIndex]["Quantitiy - 30 ml"] = qty30;
     remedyData[selectedRemedyIndex]["Quantitiy -  100ml"] = qty100;
