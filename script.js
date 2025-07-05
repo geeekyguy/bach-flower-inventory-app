@@ -1,36 +1,31 @@
 
 document.addEventListener('DOMContentLoaded', () => {
-  let remedyData = [];
+  let remedyData = remediesData;
   let selectedRemedyIndex = null;
 
-  fetch('remedies.json')
-    .then(response => response.json())
-    .then(data => {
-      remedyData = data;
-      renderTable(remedyData);
+  renderTable(remedyData);
 
-      const searchInput = document.getElementById('searchInput');
-      searchInput.addEventListener('input', () => {
-        const query = searchInput.value.toLowerCase();
-        const filtered = remedyData.filter(item => item.Name.toLowerCase().includes(query));
-        renderTable(filtered);
-      });
+  const searchInput = document.getElementById('searchInput');
+  searchInput.addEventListener('input', () => {
+    const query = searchInput.value.toLowerCase();
+    const filtered = remedyData.filter(item => item.Name.toLowerCase().includes(query));
+    renderTable(filtered);
+  });
 
-      document.getElementById('buyListBtn').addEventListener('click', () => {
-        const list = remedyData.filter(item => {
-          const qty30 = parseInt(item["Quantitiy - 30 ml"]) || 0;
-          const qty100 = parseInt(item["Quantitiy -  100ml"]) || 0;
-          const total = qty30 + qty100;
-          return total <= 1;
-        }).map(item => item.Name);
+  document.getElementById('buyListBtn').addEventListener('click', () => {
+    const list = remedyData.filter(item => {
+      const qty30 = parseInt(item["Quantitiy - 30 ml"]) || 0;
+      const qty100 = parseInt(item["Quantitiy -  100ml"]) || 0;
+      const total = qty30 + qty100;
+      return total <= 2;
+    }).map(item => item.Name);
 
-        if (list.length === 0) {
-          alert('No remedies found with total quantity less than or equal to 2.');
-        } else {
-          alert('Buy List:\n' + list.join('\n'));
-        }
-      });
-    });
+    if (list.length === 0) {
+      alert('No remedies found with total quantity less than or equal to 2.');
+    } else {
+      alert('Buy List:\n' + list.join('\n'));
+    }
+  });
 
   function renderTable(remedies) {
     const tableBody = document.getElementById('remedyTable');
