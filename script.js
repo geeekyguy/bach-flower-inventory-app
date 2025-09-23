@@ -91,4 +91,18 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTable(remedyData);
     bootstrap.Modal.getInstance(document.getElementById('updateModal')).hide();
   });
+
+  const resetBtn = document.getElementById('resetCountsBtn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      if (confirm('Are you sure you want to reset all counts to zero?')) {
+        remedyData.forEach(item => {
+          item["Quantitiy - 30 ml"] = 0;
+          item["Quantitiy -  100ml"] = 0;
+        });
+        renderTable(remedyData);
+        alert('All counts have been reset to zero!');
+      }
+    });
+  }
 });
