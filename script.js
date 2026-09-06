@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultsCountEl = document.getElementById('resultsCount');
   const emptyStateEl = document.getElementById('emptyState');
   const themeToggleBtn = document.getElementById('themeToggleBtn');
+  const themeToggleIcon = themeToggleBtn.querySelector('span');
+  const a11yStatusEl = document.getElementById('a11yStatus');
 
   function loadRemedyData() {
     let saved = null;
@@ -103,6 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderTable() {
     const tableBody = document.getElementById('remedyTable');
     const visible = getVisibleRemedies();
+
+    const focused = document.activeElement;
+    const focusedAction = focused && focused.matches('button[data-action]')
+      ? { action: focused.getAttribute('data-action'), name: focused.getAttribute('data-name') }
+      : null;
+
     tableBody.innerHTML = '';
 
     resultsCountEl.textContent = `Showing ${visible.length} of ${remedyData.length} remedies`;
@@ -112,32 +120,44 @@ document.addEventListener('DOMContentLoaded', () => {
       const total = getTotal(item);
       const status = getStatus(item);
       const name = item.name;
+      const safeName = escapeHtml(name);
 
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td class="text-start fw-medium">${escapeHtml(name)}</td>
+        <th scope="row" class="text-start fw-medium">${safeName}</th>
         <td>
           <div class="qty-stepper">
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="dec30" data-name="${escapeHtml(name)}">−</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="dec30" data-name="${safeName}" aria-label="Decrease ${safeName} 30ml quantity">−</button>
             <span class="qty-value">${item.qty30}</span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="inc30" data-name="${escapeHtml(name)}">+</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="inc30" data-name="${safeName}" aria-label="Increase ${safeName} 30ml quantity">+</button>
           </div>
         </td>
         <td>
           <div class="qty-stepper">
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="dec100" data-name="${escapeHtml(name)}">−</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="dec100" data-name="${safeName}" aria-label="Decrease ${safeName} 100ml quantity">−</button>
             <span class="qty-value">${item.qty100}</span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="inc100" data-name="${escapeHtml(name)}">+</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="inc100" data-name="${safeName}" aria-label="Increase ${safeName} 100ml quantity">+</button>
           </div>
         </td>
         <td class="fw-semibold">${total}</td>
         <td>${statusBadge(status)}</td>
-        <td><button class="btn btn-outline-primary btn-sm" data-action="edit" data-name="${escapeHtml(name)}">Edit</button></td>
+        <td><button class="btn btn-outline-primary btn-sm" data-action="edit" data-name="${safeName}" aria-label="Edit ${safeName} quantities">Edit</button></td>
       `;
       tableBody.appendChild(row);
     });
 
+    if (focusedAction) {
+      const toRefocus = tableBody.querySelector(
+        `button[data-action="${cssEscape(focusedAction.action)}"][data-name="${cssEscape(focusedAction.name)}"]`
+      );
+      if (toRefocus) toRefocus.focus();
+    }
+
     updateStats();
+  }
+
+  function cssEscape(value) {
+    return window.CSS && CSS.escape ? CSS.escape(value) : value.replace(/["\\]/g, '\\$&');
   }
 
   function escapeHtml(str) {
@@ -152,6 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
     item[field] = Math.max(0, (item[field] || 0) + delta);
     persist();
     renderTable();
+    const sizeLabel = field === 'qty30' ? '30ml' : '100ml';
+    a11yStatusEl.textContent = `${name} ${sizeLabel} quantity is now ${item[field]}`;
   }
 
   document.getElementById('remedyTable').addEventListener('click', (event) => {
@@ -224,6 +246,15 @@ document.addEventListener('DOMContentLoaded', () => {
     URL.revokeObjectURL(url);
   });
 
+  const updateModalEl = document.getElementById('updateModal');
+  updateModalEl.addEventListener('hidden.bs.modal', () => {
+    if (!selectedRemedyName) return;
+    const editBtn = document.querySelector(
+      `#remedyTable button[data-action="edit"][data-name="${cssEscape(selectedRemedyName)}"]`
+    );
+    if (editBtn) editBtn.focus();
+  });
+
   window.openUpdateForm = function(name) {
     selectedRemedyName = name;
     const item = remedyData.find(r => r.name === name);
@@ -233,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('qty30ml').value = item.qty30;
     document.getElementById('qty100ml').value = item.qty100;
 
-    const modal = new bootstrap.Modal(document.getElementById('updateModal'));
+    const modal = new bootstrap.Modal(updateModalEl);
     modal.show();
   };
 
@@ -254,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderTable();
     }
 
-    bootstrap.Modal.getInstance(document.getElementById('updateModal')).hide();
+    bootstrap.Modal.getInstance(updateModalEl).hide();
   });
 
   const resetBtn = document.getElementById('resetCountsBtn');
@@ -349,7 +380,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
-    themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+    themeToggleIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    themeToggleBtn.setAttribute('aria-pressed', String(theme === 'dark'));
+    themeToggleBtn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
     localStorage.setItem(THEME_KEY, theme);
   }
 

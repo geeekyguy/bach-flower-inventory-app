@@ -3,16 +3,17 @@
   --surface: #ffffff;
   --surface-alt: #f1ecfa;
   --text: #2c2c3a;
-  --text-muted: #6b6b7b;
+  --text-muted: #5b5b6e;
   --border: #e2ddf0;
   --primary: #7c5cbf;
   --primary-dark: #5f469c;
-  --danger: #c0455f;
-  --warning: #c8862a;
-  --success: #2f9e6e;
+  --danger: #a13a53;
+  --warning: #8a5a12;
+  --success: #1f7a53;
   --header-grad-start: #7c5cbf;
   --header-grad-end: #b57fd6;
   --shadow: 0 2px 10px rgba(80, 60, 130, 0.08);
+  --focus-ring: #2c2c3a;
 }
 
 [data-theme="dark"] {
@@ -20,7 +21,7 @@
   --surface: #201d30;
   --surface-alt: #262238;
   --text: #ece9f7;
-  --text-muted: #a8a3bd;
+  --text-muted: #b7b2ca;
   --border: #33304a;
   --primary: #a988e8;
   --primary-dark: #8a68d4;
@@ -30,10 +31,59 @@
   --header-grad-start: #3a2f5e;
   --header-grad-end: #5f4291;
   --shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+  --focus-ring: #ffffff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 
 * {
   box-sizing: border-box;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: -3rem;
+  left: 0.5rem;
+  z-index: 1050;
+  background: var(--primary-dark);
+  color: #fff;
+  padding: 0.6rem 1rem;
+  border-radius: 0 0 0.5rem 0.5rem;
+  text-decoration: none;
+  font-weight: 600;
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+  color: #fff;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 body {
@@ -218,6 +268,11 @@ body {
   gap: 0.4rem;
 }
 
+.qty-stepper .btn {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+}
+
 .qty-value {
   min-width: 1.4rem;
   display: inline-block;
@@ -247,6 +302,25 @@ body {
 
 .app-footer {
   border-top: 1px solid var(--border);
+}
+
+.modal-content {
+  background-color: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.modal-header,
+.modal-footer {
+  border-color: var(--border);
+}
+
+.modal-title {
+  color: var(--text);
+}
+
+[data-theme="dark"] .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
 }
 
 @media (max-width: 768px) {

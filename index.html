@@ -10,6 +10,10 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <a href="#mainContent" class="skip-link">Skip to main content</a>
+
+  <div id="a11yStatus" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+
   <header class="app-header">
     <div class="container">
       <div class="header-row">
@@ -20,13 +24,16 @@
             <p class="tagline">Keep track of every tincture, at a glance.</p>
           </div>
         </div>
-        <button id="themeToggleBtn" class="btn btn-icon" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
+        <button id="themeToggleBtn" class="btn btn-icon" type="button" aria-label="Switch to dark mode" aria-pressed="false" title="Toggle dark mode">
+          <span aria-hidden="true">🌙</span>
+        </button>
       </div>
     </div>
   </header>
 
-  <main class="container app-main">
+  <main class="container app-main" id="mainContent">
 
+    <h2 class="visually-hidden">Inventory summary</h2>
     <section class="stats-grid" id="statsGrid" aria-label="Inventory summary">
       <div class="stat-card">
         <span class="stat-value" id="statTotalRemedies">0</span>
@@ -46,17 +53,21 @@
       </div>
     </section>
 
+    <h2 class="visually-hidden">Search, filter and sort</h2>
     <section class="toolbar">
-      <input type="text" id="searchInput" class="form-control toolbar-search" placeholder="Search remedies..." aria-label="Search remedies" />
+      <label for="searchInput" class="visually-hidden">Search remedies by name</label>
+      <input type="text" id="searchInput" class="form-control toolbar-search" placeholder="Search remedies..." />
 
-      <select id="filterSelect" class="form-select toolbar-select" aria-label="Filter by stock level">
+      <label for="filterSelect" class="visually-hidden">Filter by stock level</label>
+      <select id="filterSelect" class="form-select toolbar-select">
         <option value="all">All remedies</option>
         <option value="low">Low stock (≤ 2)</option>
         <option value="out">Out of stock</option>
         <option value="in">In stock</option>
       </select>
 
-      <select id="sortSelect" class="form-select toolbar-select" aria-label="Sort remedies">
+      <label for="sortSelect" class="visually-hidden">Sort remedies</label>
+      <select id="sortSelect" class="form-select toolbar-select">
         <option value="name-asc">Name (A–Z)</option>
         <option value="name-desc">Name (Z–A)</option>
         <option value="total-asc">Total (low to high)</option>
@@ -64,31 +75,33 @@
       </select>
 
       <div class="toolbar-actions">
-        <button id="buyListBtn" class="btn btn-danger">🛒 Buy List</button>
-        <button id="exportCsvBtn" class="btn btn-outline-secondary">⬇ Export CSV</button>
-        <button id="resetCountsBtn" class="btn btn-warning">↺ Reset All</button>
+        <button id="buyListBtn" class="btn btn-danger" type="button"><span aria-hidden="true">🛒</span> Buy List</button>
+        <button id="exportCsvBtn" class="btn btn-outline-secondary" type="button"><span aria-hidden="true">⬇</span> Export CSV</button>
+        <button id="resetCountsBtn" class="btn btn-warning" type="button"><span aria-hidden="true">↺</span> Reset All</button>
       </div>
     </section>
 
-    <p class="text-muted small mb-2" id="resultsCount"></p>
+    <p class="text-muted small mb-2" id="resultsCount" role="status" aria-live="polite"></p>
 
+    <h2 class="visually-hidden">Remedy list</h2>
     <div class="table-responsive">
       <table class="table table-bordered table-hover align-middle remedy-table">
+        <caption class="visually-hidden">Stock levels for each remedy, with controls to adjust 30ml and 100ml bottle counts</caption>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>30ml</th>
-            <th>100ml</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Action</th>
+            <th scope="col">Name</th>
+            <th scope="col">30ml</th>
+            <th scope="col">100ml</th>
+            <th scope="col">Total</th>
+            <th scope="col">Status</th>
+            <th scope="col">Action</th>
           </tr>
         </thead>
         <tbody id="remedyTable"></tbody>
       </table>
     </div>
 
-    <p id="emptyState" class="text-center text-muted py-5 d-none">No remedies match your search or filter.</p>
+    <p id="emptyState" class="text-center text-muted py-5 d-none" role="status" aria-live="polite">No remedies match your search or filter.</p>
   </main>
 
   <footer class="app-footer text-center text-muted small py-4">
