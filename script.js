@@ -1,6 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
-  let remedyData = remediesData;
-  let selectedRemedyIndex = null;
+  const STORAGE_KEY = 'bachInventory.remedies';
+  const THEME_KEY = 'bachInventory.theme';
+  const LOW_STOCK_THRESHOLD = 2;
+
+  let remedyData = loadRemedyData();
+  let selectedRemedyName = null;
 
   const dialogModalEl = document.getElementById('messageDialog');
   const dialogModal = new bootstrap.Modal(dialogModalEl);
@@ -10,29 +14,171 @@ document.addEventListener('DOMContentLoaded', () => {
   const dialogTextareaEl = document.getElementById('messageDialogText');
   const dialogCopyBtnEl = document.getElementById('messageDialogCopyBtn');
 
-  renderTable(remedyData);
-
   const searchInput = document.getElementById('searchInput');
-  searchInput.addEventListener('input', () => {
-    const query = searchInput.value.toLowerCase();
-    const filtered = remedyData.filter(item => item.Name.toLowerCase().includes(query));
-    renderTable(filtered);
-  });
+  const filterSelect = document.getElementById('filterSelect');
+  const sortSelect = document.getElementById('sortSelect');
+  const resultsCountEl = document.getElementById('resultsCount');
+  const emptyStateEl = document.getElementById('emptyState');
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
 
-  document.getElementById('buyListBtn').addEventListener('click', () => {
-    const lowStockItems = remedyData.filter(item => {
-      const qty30 = parseInt(item['Quantitiy - 30 ml']) || 0;
-      const qty100 = parseInt(item['Quantitiy -  100ml']) || 0;
-      const total = qty30 + qty100;
-      return total <= 1;
+  function loadRemedyData() {
+    let saved = null;
+    try {
+      saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    } catch (e) {
+      saved = null;
+    }
+    const savedByName = new Map((Array.isArray(saved) ? saved : []).map(r => [r.name, r]));
+
+    return remediesData.map(base => {
+      const override = savedByName.get(base.name);
+      return {
+        name: base.name,
+        qty30: override ? (parseInt(override.qty30) || 0) : base.qty30,
+        qty100: override ? (parseInt(override.qty100) || 0) : base.qty100,
+      };
+    });
+  }
+
+  function persist() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(remedyData));
+  }
+
+  function getTotal(item) {
+    return (item.qty30 || 0) + (item.qty100 || 0);
+  }
+
+  function getStatus(item) {
+    const total = getTotal(item);
+    if (total === 0) return 'out';
+    if (total <= LOW_STOCK_THRESHOLD) return 'low';
+    return 'in';
+  }
+
+  function statusBadge(status) {
+    if (status === 'out') return '<span class="badge status-badge status-out">Out of stock</span>';
+    if (status === 'low') return '<span class="badge status-badge status-low">Low</span>';
+    return '<span class="badge status-badge status-in">In stock</span>';
+  }
+
+  function updateStats() {
+    const totalRemedies = remedyData.length;
+    const totalBottles = remedyData.reduce((sum, item) => sum + getTotal(item), 0);
+    const lowStock = remedyData.filter(item => getStatus(item) === 'low').length;
+    const outStock = remedyData.filter(item => getStatus(item) === 'out').length;
+
+    document.getElementById('statTotalRemedies').textContent = totalRemedies;
+    document.getElementById('statTotalBottles').textContent = totalBottles;
+    document.getElementById('statLowStock').textContent = lowStock;
+    document.getElementById('statOutStock').textContent = outStock;
+  }
+
+  function getVisibleRemedies() {
+    const query = searchInput.value.trim().toLowerCase();
+    const filter = filterSelect.value;
+    const sort = sortSelect.value;
+
+    let list = remedyData.filter(item => item.name.toLowerCase().includes(query));
+
+    if (filter !== 'all') {
+      list = list.filter(item => getStatus(item) === filter);
+    }
+
+    list = list.slice().sort((a, b) => {
+      switch (sort) {
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'total-asc':
+          return getTotal(a) - getTotal(b);
+        case 'total-desc':
+          return getTotal(b) - getTotal(a);
+        default:
+          return a.name.localeCompare(b.name);
+      }
     });
 
-    const list = lowStockItems.map(item => item.Name);
+    return list;
+  }
+
+  function renderTable() {
+    const tableBody = document.getElementById('remedyTable');
+    const visible = getVisibleRemedies();
+    tableBody.innerHTML = '';
+
+    resultsCountEl.textContent = `Showing ${visible.length} of ${remedyData.length} remedies`;
+    emptyStateEl.classList.toggle('d-none', visible.length !== 0);
+
+    visible.forEach(item => {
+      const total = getTotal(item);
+      const status = getStatus(item);
+      const name = item.name;
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td class="text-start fw-medium">${escapeHtml(name)}</td>
+        <td>
+          <div class="qty-stepper">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="dec30" data-name="${escapeHtml(name)}">−</button>
+            <span class="qty-value">${item.qty30}</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="inc30" data-name="${escapeHtml(name)}">+</button>
+          </div>
+        </td>
+        <td>
+          <div class="qty-stepper">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="dec100" data-name="${escapeHtml(name)}">−</button>
+            <span class="qty-value">${item.qty100}</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="inc100" data-name="${escapeHtml(name)}">+</button>
+          </div>
+        </td>
+        <td class="fw-semibold">${total}</td>
+        <td>${statusBadge(status)}</td>
+        <td><button class="btn btn-outline-primary btn-sm" data-action="edit" data-name="${escapeHtml(name)}">Edit</button></td>
+      `;
+      tableBody.appendChild(row);
+    });
+
+    updateStats();
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, ch => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[ch]));
+  }
+
+  function adjustQty(name, field, delta) {
+    const item = remedyData.find(r => r.name === name);
+    if (!item) return;
+    item[field] = Math.max(0, (item[field] || 0) + delta);
+    persist();
+    renderTable();
+  }
+
+  document.getElementById('remedyTable').addEventListener('click', (event) => {
+    const btn = event.target.closest('button[data-action]');
+    if (!btn) return;
+    const name = btn.getAttribute('data-name');
+    const action = btn.getAttribute('data-action');
+
+    if (action === 'inc30') adjustQty(name, 'qty30', 1);
+    else if (action === 'dec30') adjustQty(name, 'qty30', -1);
+    else if (action === 'inc100') adjustQty(name, 'qty100', 1);
+    else if (action === 'dec100') adjustQty(name, 'qty100', -1);
+    else if (action === 'edit') openUpdateForm(name);
+  });
+
+  searchInput.addEventListener('input', renderTable);
+  filterSelect.addEventListener('change', renderTable);
+  sortSelect.addEventListener('change', renderTable);
+
+  document.getElementById('buyListBtn').addEventListener('click', () => {
+    const lowStockItems = remedyData.filter(item => getTotal(item) <= LOW_STOCK_THRESHOLD);
+    const list = lowStockItems.map(item => item.name);
 
     if (list.length === 0) {
       showMessageDialog({
         title: 'Buy List',
-        message: 'No remedies found with total quantity less than or equal to 1.',
+        message: `No remedies found with total quantity less than or equal to ${LOW_STOCK_THRESHOLD}.`,
       });
       return;
     }
@@ -61,35 +207,31 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   });
 
-  function renderTable(remedies) {
-    const tableBody = document.getElementById('remedyTable');
-    tableBody.innerHTML = '';
-
-    remedies.forEach(item => {
-      const qty30 = parseInt(item['Quantitiy - 30 ml']) || 0;
-      const qty100 = parseInt(item['Quantitiy -  100ml']) || 0;
-      const total = qty30 + qty100;
-      const actualIndex = remedyData.indexOf(item);
-
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${item.Name}</td>
-        <td>${qty30}</td>
-        <td>${qty100}</td>
-        <td>${total}</td>
-        <td><button class="btn btn-outline-primary btn-sm" onclick="openUpdateForm(${actualIndex})">Update</button></td>
-      `;
-      tableBody.appendChild(row);
+  document.getElementById('exportCsvBtn').addEventListener('click', () => {
+    const rows = [['Name', '30ml Quantity', '100ml Quantity', 'Total Quantity']];
+    remedyData.forEach(item => {
+      rows.push([item.name, item.qty30, item.qty100, getTotal(item)]);
     });
-  }
+    const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `bach-flower-inventory-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  });
 
-  window.openUpdateForm = function(index) {
-    selectedRemedyIndex = index;
-    const item = remedyData[index];
+  window.openUpdateForm = function(name) {
+    selectedRemedyName = name;
+    const item = remedyData.find(r => r.name === name);
+    if (!item) return;
 
-    document.getElementById('remedyName').value = item.Name;
-    document.getElementById('qty30ml').value = item['Quantitiy - 30 ml'];
-    document.getElementById('qty100ml').value = item['Quantitiy -  100ml'];
+    document.getElementById('remedyName').value = item.name;
+    document.getElementById('qty30ml').value = item.qty30;
+    document.getElementById('qty100ml').value = item.qty100;
 
     const modal = new bootstrap.Modal(document.getElementById('updateModal'));
     modal.show();
@@ -98,16 +240,20 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('updateForm').addEventListener('submit', function(event) {
     event.preventDefault();
 
-    const qty30 = parseInt(document.getElementById('qty30ml').value.trim()) || 0;
-    const qty100 = parseInt(document.getElementById('qty100ml').value.trim()) || 0;
+    const qty30 = Math.max(0, parseInt(document.getElementById('qty30ml').value) || 0);
+    const qty100 = Math.max(0, parseInt(document.getElementById('qty100ml').value) || 0);
 
     document.getElementById('qty30ml').value = qty30;
     document.getElementById('qty100ml').value = qty100;
 
-    remedyData[selectedRemedyIndex]['Quantitiy - 30 ml'] = qty30;
-    remedyData[selectedRemedyIndex]['Quantitiy -  100ml'] = qty100;
+    const item = remedyData.find(r => r.name === selectedRemedyName);
+    if (item) {
+      item.qty30 = qty30;
+      item.qty100 = qty100;
+      persist();
+      renderTable();
+    }
 
-    renderTable(remedyData);
     bootstrap.Modal.getInstance(document.getElementById('updateModal')).hide();
   });
 
@@ -120,10 +266,11 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmText: 'Yes, reset everything',
         onConfirm: () => {
           remedyData.forEach(item => {
-            item['Quantitiy - 30 ml'] = 0;
-            item['Quantitiy -  100ml'] = 0;
+            item.qty30 = 0;
+            item.qty100 = 0;
           });
-          renderTable(remedyData);
+          persist();
+          renderTable();
           showMessageDialog({
             title: 'Reset complete',
             message: 'All counts have been reset to zero.',
@@ -199,4 +346,21 @@ document.addEventListener('DOMContentLoaded', () => {
       { once: true }
     );
   }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+    localStorage.setItem(THEME_KEY, theme);
+  }
+
+  themeToggleBtn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  });
+
+  const savedTheme = localStorage.getItem(THEME_KEY);
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+
+  renderTable();
 });

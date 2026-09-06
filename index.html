@@ -4,32 +4,98 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Bach Flower Remedy Inventory</title>
+  <meta name="description" content="Track stock levels for all 38 Bach flower remedies and Rescue Remedy, right in your browser." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%B8%3C/text%3E%3C/svg%3E" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container mt-5">
-    <h2 class="mb-4 text-center">Bach Flower Remedy Inventory</h2>
-    <div class="d-flex justify-content-between mb-3"><input type="text" id="searchInput" class="form-control w-75" placeholder="Search remedies..." /><button id="buyListBtn" class="btn btn-danger ms-3">Buy List</button></div>
-    
-  <div class="mb-3 d-flex gap-2">
-    <button id="resetCountsBtn" class="btn btn-warning">Reset All Counts</button>
-  </div>
-  <table class="table table-bordered table-hover">
-      <thead class="table-dark">
-        <tr>
-          <th>Name</th>
-          <th>30ml Quantity</th>
-          <th>100ml Quantity</th>
-          <th>Total Quantity</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody id="remedyTable"></tbody>
-    </table>
-  </div>
+  <header class="app-header">
+    <div class="container">
+      <div class="header-row">
+        <div class="brand">
+          <span class="brand-emoji" aria-hidden="true">🌸</span>
+          <div>
+            <h1>Bach Flower Remedy Inventory</h1>
+            <p class="tagline">Keep track of every tincture, at a glance.</p>
+          </div>
+        </div>
+        <button id="themeToggleBtn" class="btn btn-icon" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
+      </div>
+    </div>
+  </header>
 
-  <!-- Modal -->
+  <main class="container app-main">
+
+    <section class="stats-grid" id="statsGrid" aria-label="Inventory summary">
+      <div class="stat-card">
+        <span class="stat-value" id="statTotalRemedies">0</span>
+        <span class="stat-label">Remedies</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="statTotalBottles">0</span>
+        <span class="stat-label">Total bottles</span>
+      </div>
+      <div class="stat-card stat-warning">
+        <span class="stat-value" id="statLowStock">0</span>
+        <span class="stat-label">Low stock</span>
+      </div>
+      <div class="stat-card stat-danger">
+        <span class="stat-value" id="statOutStock">0</span>
+        <span class="stat-label">Out of stock</span>
+      </div>
+    </section>
+
+    <section class="toolbar">
+      <input type="text" id="searchInput" class="form-control toolbar-search" placeholder="Search remedies..." aria-label="Search remedies" />
+
+      <select id="filterSelect" class="form-select toolbar-select" aria-label="Filter by stock level">
+        <option value="all">All remedies</option>
+        <option value="low">Low stock (≤ 2)</option>
+        <option value="out">Out of stock</option>
+        <option value="in">In stock</option>
+      </select>
+
+      <select id="sortSelect" class="form-select toolbar-select" aria-label="Sort remedies">
+        <option value="name-asc">Name (A–Z)</option>
+        <option value="name-desc">Name (Z–A)</option>
+        <option value="total-asc">Total (low to high)</option>
+        <option value="total-desc">Total (high to low)</option>
+      </select>
+
+      <div class="toolbar-actions">
+        <button id="buyListBtn" class="btn btn-danger">🛒 Buy List</button>
+        <button id="exportCsvBtn" class="btn btn-outline-secondary">⬇ Export CSV</button>
+        <button id="resetCountsBtn" class="btn btn-warning">↺ Reset All</button>
+      </div>
+    </section>
+
+    <p class="text-muted small mb-2" id="resultsCount"></p>
+
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover align-middle remedy-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>30ml</th>
+            <th>100ml</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="remedyTable"></tbody>
+      </table>
+    </div>
+
+    <p id="emptyState" class="text-center text-muted py-5 d-none">No remedies match your search or filter.</p>
+  </main>
+
+  <footer class="app-footer text-center text-muted small py-4">
+    Changes are saved automatically in this browser.
+  </footer>
+
+  <!-- Update Modal -->
   <div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
@@ -60,7 +126,7 @@
     </div>
   </div>
 
-
+  <!-- Message / Confirm Modal -->
   <div class="modal fade" id="messageDialog" tabindex="-1" aria-labelledby="messageDialogLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
